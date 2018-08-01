@@ -18,7 +18,7 @@ library(tidyverse)
 ### Download data and skeleton script from GitHub into project
 Go to GitHub [repo](https://github.com/mariekekjones/BIMS-bootcamp) to get these materials
 
-### NHANES data -------------
+### NHANES data
 
 The data we're going to work with comes from the National Health and Nutrition Examination Survey (NHANES) program at the CDC. You can read a lot more about NHANES on the [CDC's website](http://www.cdc.gov/nchs/nhanes/) or [Wikipedia](https://en.wikipedia.org/wiki/National_Health_and_Nutrition_Examination_Survey). 
 
@@ -42,7 +42,7 @@ nh
 
 This particular excerpt has 5000 observations of 32 variables
 
-### dplyr review --------------
+### dplyr review
 
 For those of you who were here for the Intro session yesterday, this will be a review. For those of you new to the tidyverse, this is exciting stuff!
 
@@ -85,7 +85,7 @@ filter(nh, Age >= 80) #without pipe
 nh %>% filter(Age >= 80) #pipe!
 ```
 
-### Nesting v. %>% -------------
+### Nesting v. %>%
 
 Let's say we want to see the mean height, grouped by Race, only for adults.
 
@@ -119,7 +119,7 @@ nh %>%
 ```
 
 
-#### ** EXERCISE 1 ** ------------------
+#### ** EXERCISE 1 **
 ** YOUR TURN **
 A. How many observations are there of children (< 18 years old)?
 B. How many cases of obese children are there (BMI >= 30)?
@@ -150,7 +150,7 @@ nh %>%
 
 Let's make some plots to examine the relationships between variables. We will be plotting using ggplot2
 
-### About ggplot2 --------------
+### About ggplot2
 
 **ggplot2** is a widely used R package that extends R's visualization capabilities. It takes the hassle out of things like creating legends, mapping other variables to scales like color, or plotting multiple small plots together.
 
@@ -166,7 +166,7 @@ _First, a note about `qplot()`._ The `qplot()` function is a quick and dirty way
 
 See [R Graphics Cookbook](http://www.cookbook-r.com/Graphs/) for more help with ggplot2.
 
-### Scatterplots --------------
+### Scatterplots
 Age (X) against Height (Y) (continuous X, continuous Y)
 ```{r}
 nh %>%
@@ -223,7 +223,7 @@ nh %>%
   geom_smooth(method = "loess", lwd = 2)
 ```
 
-### ** EXERCISE 2 ** --------------
+### ** EXERCISE 2 **
 ** YOUR TURN **
 A. Use a scatterplot to investigate the relationship between Age and Testosterone.
 
@@ -267,7 +267,7 @@ nh %>%
   geom_smooth(aes(color = PhysActive))
 ```
 
-### Visualizations for discrete X ------------
+### Visualizations for discrete X
 
 Above we were plotting a continuous X and a continuous Y. For visualizations with discrete X variables and continuous Y, boxplots will be shown instead of scatterplots.
 
@@ -325,11 +325,155 @@ nh %>%
   geom_jitter(alpha = .25) +
   geom_boxplot(alpha = .5, outlier.colour = NA)
 ```
-
-### Choosing colors and themes -----------
+If we want to see the effect of Gender on this relationship, remove jittered points and color boxplots by Gender
 
 ```{r}
-#just boxplot colored by Diabetes
+nh %>%
+  filter(!is.na(SmokingStatus)) %>%
+  ggplot(aes(x = SmokingStatus, y = BMI)) + 
+  geom_boxplot(aes(color = Gender))
+```
+
+That is not exactly what I wanted. I wanted to fill the whole box with color. Argument is fill instead of color
+```{r}
+nh %>%
+  filter(!is.na(SmokingStatus)) %>%
+  ggplot(aes(x = SmokingStatus, y = BMI)) + 
+  geom_boxplot(aes(fill= Gender))
+```
+
+### **EXERCISE 3** 
+** YOUR TURN **
+A. Create boxplots showing height for Adults of different Races
+
+B. Add jittered data under boxplots in A.
+
+C. Color boxplots in A by Gender
+
+```{r ex3}
+#A.
+nh %>%
+  filter(Age > 18) %>%
+  ggplot(aes(x = Race, y= Height)) +
+  geom_boxplot()
+
+#B. 
+nh %>%
+  filter(Age > 18) %>%
+  ggplot(aes(x = Race, y= Height)) +
+  geom_jitter(alpha = .25) +
+  geom_boxplot(alpha = .7, outlier.colour = NA)
+
+#C.
+nh %>%
+  filter(Age > 18) %>%
+  ggplot(aes(x = Race, y= Height)) +
+  geom_boxplot(aes(fill = Gender))
+```
+
+### Plotting univariate continuous data
+
+What if we just wanted to visualize distribution of a single continuous variable? A histogram is the usual go-to visualization. Here we only have one aesthetic mapping instead of two.
+
+```{r init_histogram}
+nh %>%
+  ggplot(aes(Height))
+
+#save canvas as p then add histogram
+p <- nh %>%
+  ggplot(aes(Height))
+
+p + geom_histogram()
+```
+
+Interesting shape because this includes children. When we do this ggplot lets us know that we're automatically selecting the width of the bins, and we might want to think about this a little further.
+
+```{r}
+p + geom_histogram(bins=30)
+p + geom_histogram(bins=10)
+p + geom_histogram(bins=200)
+```
+
+```{r histogram}
+p + geom_histogram(bins=60)
+```
+
+Alternatively we could plot a smoothed density curve instead of a histogram:
+
+```{r}
+p + geom_density()
+```
+
+Back to histograms. What if we wanted to color this by Race?
+
+```{r}
+p + geom_histogram(aes(color=Race))
+```
+
+That's not what we had in mind. That's just the outline of the bars. We want to change the _fill_ color of the bars.
+
+```{r}
+p + geom_histogram(aes(fill=Race))
+```
+
+Well, that's not exactly what we want either. If you look at the help for `?geom_histogram` you'll see that by default it stacks overlapping points. This isn't really an effective visualization. Let's change the position argument.
+
+```{r}
+p + geom_histogram(aes(fill=Race), position="identity")
+```
+
+Now the problem is that the histograms are blocking each other. What if we tried transparency?
+
+```{r}
+p + geom_histogram(aes(fill=Race), position="identity", alpha=1/3)
+```
+
+That's somewhat helpful, and might work for two distributions, but it gets cumbersome with 5. Let's try this with density plots, first changing the color of the line:
+
+```{r}
+p + geom_density(aes(color=Race), lwd = 2)
+```
+
+Then by changing the color of the fill and setting the transparency to 25%:
+
+```{r densityplot, eval=TRUE, fig.keep="last"}
+p + geom_density(aes(color = Race, fill=Race), alpha=1/4)
+```
+
+### Faceting
+
+Facets display subsets of the data in different panels. There are a couple ways to do this, but `facet_wrap()` tries to sensibly wrap a series of facets into a 2-dimensional grid of small multiples. Just give it a formula specifying which variables to facet by. If you have a look at the help for `?facet_wrap()` you'll see that we can control how the wrapping is laid out.
+
+Remember how our histograms of height by Race were not easy to read when they were overlapping? Perhaps a good solution instead of transparency, is to facet.
+
+```{r hist_facet1}
+nh %>%
+  ggplot(aes(Height)) +
+  geom_histogram(aes(fill = Race), position = "identity")
+
+#facet histograms by race
+nh %>%
+  ggplot(aes(Height)) +
+  geom_histogram(aes(fill = Race), position = "identity") +
+  facet_wrap(~Race)
+
+#facet density plots by Race
+nh %>%
+  ggplot(aes(Height)) +
+  geom_density() +
+  facet_wrap(~Race)
+```
+
+### Choosing colors and themes
+
+```{r}
+# boxplot of BMI by Smoking status without missing Smoking Status
+nh %>%
+  filter(!is.na(SmokingStatus)) %>%
+  ggplot(aes(x = SmokingStatus, y = BMI)) + 
+  geom_boxplot()
+
+#colored by Diabetes
 nh %>%
   filter(!is.na(SmokingStatus)) %>%
   ggplot(aes(x = SmokingStatus, y = BMI)) + 
@@ -349,173 +493,42 @@ nh %>%
   geom_boxplot(aes(fill = Diabetes)) +
   scale_fill_manual(values = c("cornflowerblue", "coral1")) +
   theme_bw()
-
-#experiment with colors and themes
-#save basic plot as letter
-p <- nh %>%
-  filter(!is.na(SmokingStatus)) %>%
-  ggplot(aes(x = SmokingStatus, y = BMI, fill = Diabetes)) + 
-  geom_boxplot()
-p
-
-colors()
-
-p + theme_bw()
-
-p + theme_classic() + scale_fill_manual(values = c("turquoise2", "violetred"))
 ```
 
-
-### ** EXERCISE 3 ** --------------
+### ** EXERCISE 4 **
 ** YOUR TURN **
-A. Create a plot showing the association between RelationshipStatus and the Number of Alcoholic drinks yearly (`AlcoholYear`) for adults.
+Practice creating the plots pictured below
 
-B. Choose your own colors to show the effect of Gender on this association.
-```{r}
+A. ![No = not physically active, Yes = physically active](plots/Plot4a.png)
+
+B. ![Custom colors are "salmon" and "seagreen"](plots/Plot4b.png)
+
+C. ![](plots/Plot4c.png) 
+
+```{r ex}
 #A
 nh %>%
-  filter(Age > 18) %>%
-  ggplot(aes(x = RelationshipStatus, y = AlcoholYear)) + 
-  geom_boxplot()
+  filter(Gender == "male" & Age >= 65 & Age < 80) %>%
+  ggplot(aes(Age, Testosterone)) +
+  geom_point() +
+  facet_wrap(~PhysActive) +
+  geom_smooth()
 
-#B with custom color
+#B
 nh %>%
   ggplot(aes(x = RelationshipStatus, y = AlcoholYear, fill = Gender)) +
   geom_boxplot() +
   scale_fill_manual(values = c("salmon", "seagreen"))
-```
 
-### Faceting
-
-Facets display subsets of the data in different panels. There are a couple ways to do this, but `facet_wrap()` tries to sensibly wrap a series of facets into a 2-dimensional grid of small multiples. Just give it a formula specifying which variables to facet by. We can continue adding more layers, such as smoothing. If you have a look at the help for `?facet_wrap()` you'll see that we can control how the wrapping is laid out.
-
-```{r scatter_facet1}
-#start with basic plot canvas saved as letter
-m <- nh %>%
-  ggplot(aes(x= Age, y = Height))
-m
-
-#add points colored by gender to canvas
-m + geom_point(aes(color = Gender))
-
-#facet by race
-m + geom_point(aes(color = Gender)) +
+#C
+nh %>%
+  filter(Age < 20) %>%
+  ggplot(aes(x = Age, y = Height)) +
+  geom_smooth(aes(color = Gender)) +
   facet_wrap(~ Race)
 ```
 
-
-**EXERCISE practicing reproducing plots from pictures**
-
-A. Here
-B. Here
-
-```{r ex}
-
-```
-
-1. **Bonus**: using `geom_line()` and an aesthetic mapping `country` to `group=`, make a "spaghetti plot", showing _semitransparent_ lines connected for each country, faceted by continent. Add a smoothed loess curve with a thick (`lwd=3`) line with no standard error stripe. Reduce the opacity (`alpha=`) of the individual black lines. _Don't_ show Oceania countries (that is, `filter()` the data where `continent!="Oceania"` before you plot it).
-```{r spaghetti, echo=FALSE, eval=TRUE, fig.keep="last", fig.width=8}
-p <- ggplot(filter(gm, continent!="Oceania"), aes(year, lifeExp))
-#p + facet_wrap(~continent) + geom_line()
-#p + facet_wrap(~continent) + geom_line(aes(group=country))
-p + facet_wrap(~continent) + geom_line(aes(group=country), alpha=.5) + geom_smooth(lwd=3, se=FALSE)
-```
-
-### Plotting univariate continuous data
-
-What if we just wanted to visualize distribution of a single continuous variable? A histogram is the usual go-to visualization. Here we only have one aesthetic mapping instead of two.
-
-```{r init_histogram, eval=TRUE}
-p <- ggplot(gm, aes(lifeExp))
-```
-
-```{r}
-p + geom_histogram()
-```
-
-When we do this ggplot lets us know that we're automatically selecting the width of the bins, and we might want to think about this a little further.
-
-```{r}
-p + geom_histogram(bins=30)
-p + geom_histogram(bins=10)
-p + geom_histogram(bins=200)
-```
-
-```{r histogram, eval=TRUE, fig.keep="last"}
-p + geom_histogram(bins=60)
-```
-
-Alternatively we could plot a smoothed density curve instead of a histogram:
-
-```{r}
-p + geom_density()
-```
-
-Back to histograms. What if we wanted to color this by continent?
-
-```{r}
-p + geom_histogram(aes(color=continent))
-```
-
-That's not what we had in mind. That's just the outline of the bars. We want to change the _fill_ color of the bars.
-
-```{r}
-p + geom_histogram(aes(fill=continent))
-```
-
-Well, that's not exactly what we want either. If you look at the help for `?geom_histogram` you'll see that by default it stacks overlapping points. This isn't really an effective visualization. Let's change the position argument.
-
-```{r}
-p + geom_histogram(aes(fill=continent), position="identity")
-```
-
-But the problem there is that the histograms are blocking each other. What if we tried transparency? Faceting?
-
-```{r}
-p + geom_histogram(aes(fill=continent), position="identity", alpha=1/3)
-```
-
-That's somewhat helpful, and might work for two distributions, but it gets cumbersome with 5.
-Try faceting:
-
-```{r}
-p + geom_histogram() + facet_wrap(~continent)
-```
-
-Let's go back and try this with density plots, first changing the color of the line:
-
-```{r}
-p + geom_density(aes(color=continent), lwd = 2)
-```
-
-Then by changing the color of the fill and setting the transparency to 25%:
-
-```{r densityplot, eval=TRUE, fig.keep="last"}
-p + geom_density(aes(fill=continent), alpha=1/4)
-```
-
-
-----
-
-**EXERCISE `r .ex``r .ex=.ex+1`**
-
-1. Plot a histogram of GDP Per Capita.
-1. Do the same but use a log<sub>10</sub> x-axis.
-1. Still on the log<sub>10</sub> x-axis scale, try a density plot mapping continent to the fill of each density distribution, and reduce the opacity.
-1. Still on the log<sub>10</sub> x-axis scale, make a histogram faceted by continent _and_ filled by continent. Facet with a single column (see `?facet_wrap` for help). 
-1. Save this figure to a 6x10 PDF file.
-
-```{r, echo=FALSE, eval=FALSE}
-p <- ggplot(gm, aes(gdpPercap))
-p + geom_histogram()
-
-p <- p + scale_x_log10()
-p + geom_histogram()
-p + geom_density(aes(fill=continent), alpha=1/4)
-p + geom_histogram(aes(fill=continent)) + facet_wrap(~continent, ncol=1)
-ggsave("myplot.pdf", width=6, height=10)
-```
-
+# AFTERNOON SESSION
 ### Analysis
 
 ```{r}
@@ -526,7 +539,6 @@ nh
 
 levels(nh$Race)
 ```
-
 
 ### T-tests 
 T-tests analyze the difference in 2 group means
@@ -678,5 +690,3 @@ plot(TukeyHSD(aov(fit)))
 #summary()
 summary(fit)
 ```
-
-Obviously need to cut lots to get to 3 hours. Don't worry!
