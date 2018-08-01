@@ -18,7 +18,7 @@ library(tidyverse)
 ### Download data and skeleton script from GitHub into project
 Go to GitHub [repo](https://github.com/mariekekjones/BIMS-bootcamp) to get these materials
 
-### NHANES data
+### NHANES data -------------
 
 The data we're going to work with comes from the National Health and Nutrition Examination Survey (NHANES) program at the CDC. You can read a lot more about NHANES on the [CDC's website](http://www.cdc.gov/nchs/nhanes/) or [Wikipedia](https://en.wikipedia.org/wiki/National_Health_and_Nutrition_Examination_Survey). 
 
@@ -42,7 +42,7 @@ nh
 
 This particular excerpt has 5000 observations of 32 variables
 
-### dplyr review
+### dplyr review --------------
 
 For those of you who were here for the Intro session yesterday, this will be a review. For those of you new to the tidyverse, this is exciting stuff!
 
@@ -85,13 +85,13 @@ filter(nh, Age >= 80) #without pipe
 nh %>% filter(Age >= 80) #pipe!
 ```
 
-### Nesting v. %>%
+### Nesting v. %>% -------------
 
-Let's say we want to see the mean BMI, grouped by SmokingStatus, only for adults.
+Let's say we want to see the mean height, grouped by Race, only for adults.
 
 The way you do this without pipes is completely inside-out and backwards from the way you express in words and in thought what you want to do. Because the arguments belonging to a function get pushed farther and father away from the function name as you add more nesting elements, that results in messy, unreadable code. 
 ```{r wo pipe}
-summarize(group_by(filter(nh, Age >= 18), SmokingStatus), meanBMI=mean(BMI, na.rm = TRUE))
+summarize(group_by(filter(nh, Age >= 18), Race), meanHeight=mean(Height, na.rm = TRUE))
 ```
 
 Compare this code with the mental process of what you're actually trying to accomplish. 
@@ -99,23 +99,31 @@ Compare this code with the mental process of what you're actually trying to acco
 Really what we want to do:
 1. take nh THEN
 1. filter for adults THEN
-1. group_by SmokingStatus THEN
-1. summarize mean BMI and remove NAs
+1. group_by Race THEN
+1. summarize mean Height and remove NAs
 
 The pipe operator `%>%` allows us to group the arguments with their function and order the functions in the same order as we want to do them. In this way we can pass the output tibble from one function to the input tibble of the next function.
 
 ```{r w pipe}
 nh %>%
   filter(Age >= 18) %>%
-  group_by(SmokingStatus) %>%
-  summarize(meanBMI = mean(BMI, na.rm = TRUE))
+  group_by(Race) %>%
+  summarize(meanHeight = mean(Height, na.rm = TRUE))
+
+#would be nice to see this list arranged in order
+nh %>%
+  filter(Age >= 18) %>%
+  group_by(Race) %>%
+  summarize(meanHeight = mean(Height, na.rm = TRUE)) %>%
+  arrange(meanHeight)
 ```
 
+
+#### ** EXERCISE 1 ** ------------------
 ** YOUR TURN **
-** EXERCISE 1 **
 A. How many observations are there of children (< 18 years old)?
 B. How many cases of obese children are there (BMI >= 30)?
-C. Use `filter()` followed by `group_by()` and `summarize()` to find the mean BMI by Smoking Status for only people who have Diabetes. Do smokers or non-smokers have higher BMI?
+C. Use `filter()`, `group_by()` and `summarize()` to find the mean BMI by Smoking Status for only Adults who have Diabetes. Do smokers or non-smokers have higher BMI?
 
 ```{r ex1}
 #A
@@ -128,7 +136,7 @@ nh %>%
 
 #C
 nh %>%
-  filter(Diabetes == "Yes") %>%
+  filter(Age >= 18 & Diabetes == "Yes") %>%
   group_by(SmokingStatus) %>%
   summarize(meanBMI = mean(BMI, na.rm = TRUE))
 ```
@@ -142,7 +150,7 @@ nh %>%
 
 Let's make some plots to examine the relationships between variables. We will be plotting using ggplot2
 
-### About ggplot2
+### About ggplot2 --------------
 
 **ggplot2** is a widely used R package that extends R's visualization capabilities. It takes the hassle out of things like creating legends, mapping other variables to scales like color, or plotting multiple small plots together.
 
@@ -158,7 +166,7 @@ _First, a note about `qplot()`._ The `qplot()` function is a quick and dirty way
 
 See [R Graphics Cookbook](http://www.cookbook-r.com/Graphs/) for more help with ggplot2.
 
-### Scatterplots
+### Scatterplots --------------
 Age (X) against Height (Y) (continuous X, continuous Y)
 ```{r}
 nh %>%
@@ -169,23 +177,23 @@ nh %>%
 
 #color the points by Gender
 nh %>%
-ggplot(aes(x= Age, y = Height)) + 
+  ggplot(aes(x= Age, y = Height)) + 
   geom_point(aes(color = Gender))
 
 #color the points blue and shape them as +
 nh %>%
-ggplot(aes(x= Age, y = Height)) + 
+  ggplot(aes(x= Age, y = Height)) + 
   geom_point(color = "blue", shape = 3)
 
 #what is the difference between coloring by a variable and coloring by static values
 #color the points by Gender (again)
 nh %>%
-ggplot(aes(x= Age, y = Height)) + 
+  ggplot(aes(x= Age, y = Height)) + 
   geom_point(aes(color = Gender))
 
 #plot points colored by Gender and smoothed line
 nh %>%
-ggplot(aes(x= Age, y = Height)) +
+  ggplot(aes(x= Age, y = Height)) +
   geom_point(aes(color = Gender)) + 
   geom_smooth() #both genders
 ```
@@ -198,24 +206,68 @@ We can change the geom_smooth() behavior by tweaking the parameters to color by 
 ```{r}
 #plot smoothed trend line and points both colored by gender
 nh %>%
-ggplot(aes(x= Age, y = Height)) +
+  ggplot(aes(x= Age, y = Height)) +
   geom_point(aes(color = Gender)) + 
   geom_smooth(aes(color = Gender), method = "loess")
 
 # color all layers by Gender
 nh %>%
-ggplot(aes(x= Age, y = Height, color = Gender)) +
+  ggplot(aes(x= Age, y = Height, color = Gender)) +
   geom_point() + 
   geom_smooth(method = "loess")
 
 # color all layers by Gender, add transparency to points, make line bolder
 nh %>%
-ggplot(aes(x= Age, y = Height, color = Gender)) +
+  ggplot(aes(x= Age, y = Height, color = Gender)) +
   geom_point(alpha = .2) + 
   geom_smooth(method = "loess", lwd = 2)
 ```
 
-### Visualizations for discrete X
+### ** EXERCISE 2 ** --------------
+** YOUR TURN **
+A. Use a scatterplot to investigate the relationship between Age and Testosterone.
+
+B. Color the plot in A by Gender.
+
+C. Create the plot in A for just men.
+
+D. Filter for men > 65 and < 80 years old and then examine the relationship between Age and Testosterone.
+
+E. Does the relationship you saw in D differ if the man is physically active (PhysActive == "Yes")? Use colored loess lines to see the effect of physical activity.
+```{r}
+#A
+nh %>%
+  ggplot(aes(x = Age, y = Testosterone)) + 
+  geom_point()
+
+#B
+#color by Gender
+nh %>%
+  ggplot(aes(x = Age, y = Testosterone)) + 
+  geom_point(aes(color = Gender))
+
+#C
+#just men
+nh %>%
+  filter(Gender == "male") %>%
+  ggplot(aes(x = Age, y = Testosterone)) + 
+  geom_point()
+
+#D
+nh %>%
+  filter(Gender == "male" & Age > 65 & Age < 80) %>%
+  ggplot(aes(x = Age, y = Testosterone)) + 
+  geom_point()
+
+#E
+nh %>%
+  filter(Gender == "male" & Age > 65 & Age < 80) %>%
+  ggplot(aes(x = Age, y = Testosterone)) + 
+  geom_point() + 
+  geom_smooth(aes(color = PhysActive))
+```
+
+### Visualizations for discrete X ------------
 
 Above we were plotting a continuous X and a continuous Y. For visualizations with discrete X variables and continuous Y, boxplots will be shown instead of scatterplots.
 
@@ -230,7 +282,7 @@ nh %>%
   ggplot(aes(x = SmokingStatus, y = BMI)) + geom_point()
 # no variability in X values --> overplotting
 
-# so add some variability
+# so add some random variability to x-axis
 nh %>%
   ggplot(aes(x = SmokingStatus, y = BMI)) + geom_jitter()
 ```
@@ -241,7 +293,8 @@ Note that the little bit of horizontal noise that's added to the jitter is rando
 # remove NA category and add transparency
 nh %>%
   filter(!is.na(SmokingStatus)) %>%
-  ggplot(aes(x = SmokingStatus, y = BMI)) + geom_jitter(alpha = .25)
+  ggplot(aes(x = SmokingStatus, y = BMI)) + 
+  geom_jitter(alpha = .25)
 ```
 
 Probably a more common visualization for a discrete X is to show a box plot:
@@ -273,7 +326,7 @@ nh %>%
   geom_boxplot(alpha = .5, outlier.colour = NA)
 ```
 
-### Choosing colors and themes
+### Choosing colors and themes -----------
 
 ```{r}
 #just boxplot colored by Diabetes
@@ -292,7 +345,7 @@ nh %>%
 #change theme
 nh %>%
   filter(!is.na(SmokingStatus)) %>%
-    ggplot(aes(x = SmokingStatus, y = BMI)) + 
+  ggplot(aes(x = SmokingStatus, y = BMI)) + 
   geom_boxplot(aes(fill = Diabetes)) +
   scale_fill_manual(values = c("cornflowerblue", "coral1")) +
   theme_bw()
@@ -301,7 +354,8 @@ nh %>%
 #save basic plot as letter
 p <- nh %>%
   filter(!is.na(SmokingStatus)) %>%
-  ggplot(aes(x = SmokingStatus, y = BMI, fill = Diabetes)) + geom_boxplot()
+  ggplot(aes(x = SmokingStatus, y = BMI, fill = Diabetes)) + 
+  geom_boxplot()
 p
 
 colors()
@@ -311,36 +365,25 @@ p + theme_bw()
 p + theme_classic() + scale_fill_manual(values = c("turquoise2", "violetred"))
 ```
 
+
+### ** EXERCISE 3 ** --------------
 ** YOUR TURN **
-** EXERCISE 2 **
-### break this exercise into 2, one for scatterplots and one for boxplots
-A. Use a scatterplot to investigate the relationship between Age and Testosterone for men between 65 and 80 years old.
-B. Does the relationship you saw in A differ if the man is physically active (PhysActive == "Yes")? Use colored loess lines to see the effect of physical activity.
-C. Create a plot showing the relationship between RelationshipStatus and the Number of Alcoholic drinks yearly (`AlcoholYear`) for adults. Optionally, color by Gender.
+A. Create a plot showing the association between RelationshipStatus and the Number of Alcoholic drinks yearly (`AlcoholYear`) for adults.
+
+B. Choose your own colors to show the effect of Gender on this association.
 ```{r}
 #A
 nh %>%
-  filter(Gender == "male" & Age > 65 & Age < 80) %>%
-  ggplot(aes(x = Age, y = Testosterone)) + 
-  geom_point()
+  filter(Age > 18) %>%
+  ggplot(aes(x = RelationshipStatus, y = AlcoholYear)) + 
+  geom_boxplot()
 
-#B
+#B with custom color
 nh %>%
-  filter(Gender == "male" & Age > 65 & Age < 80) %>%
-  ggplot(aes(x = Age, y = Testosterone)) + 
-  geom_point() + 
-  geom_smooth(aes(color = PhysActive))
-
-#C
-nh %>%
-  ggplot(aes(x = RelationshipStatus, y = AlcoholYear)) + geom_boxplot()
-
-#C with color
-nh %>%
-  ggplot(aes(x = RelationshipStatus, y = AlcoholYear, fill = Gender)) + geom_boxplot()
+  ggplot(aes(x = RelationshipStatus, y = AlcoholYear, fill = Gender)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("salmon", "seagreen"))
 ```
-
----- HERE is where I am currently editing. Above is done. Below is not ----
 
 ### Faceting
 
