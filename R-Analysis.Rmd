@@ -1,0 +1,221 @@
+---
+title: "R-Analysis"
+author: "Data Services @ HSL"
+date: "8/2/2018"
+output: github_document
+---
+
+# AFTERNOON SESSION
+### Analysis in R
+
+This session will cover the basics of data analysis in R. We will go over descriptive statistics, missing data, and inferential statistics including hypothesis testing and assessing assumptions.
+
+This lesson assumes a basic familiarity with R, data frames, and manipulating data with tidyr, dplyr and the pipe `%>%`, and ggplot2.
+
+In this session, we will use the following packages:
+- tidyverse 
+- or readr, dplyr, & ggplot2
+
+```{r lib}
+library(tidyverse)
+```
+
+### Download data and skeleton script from GitHub into project
+Go to GitHub [repo](https://github.com/mariekekjones/BIMS-bootcamp) to get these materials
+
+### NHANES data
+
+The data we're going to work with comes from the National Health and Nutrition Examination Survey (NHANES) program at the CDC. You can read a lot more about NHANES on the [CDC's website](http://www.cdc.gov/nchs/nhanes/) or [Wikipedia](https://en.wikipedia.org/wiki/National_Health_and_Nutrition_Examination_Survey). 
+
+NHANES is a research program designed to assess the health and nutritional status of adults and children in the United States. The survey is one of the only to combine both survey questions and physical examinations. It began in the 1960s and since 1999 examines a nationally representative sample of about 5,000 people each year. The NHANES interview includes demographic, socioeconomic, dietary, and health-related questions. The physical exam includes medical, dental, and physiological measurements, as well as several standard laboratory tests. NHANES is used to determine the prevalence of major diseases and risk factors for those diseases. NHANES data are also the basis for national standards for measurements like height, weight, and blood pressure. Data from this survey is used in epidemiology studies and health sciences research, which help develop public health policy, direct and design health programs and services, and expand the health knowledge for the Nation.
+
+We are using a small slice of this data. We're only using a handful of variables from the 2011-2012 survey years on about 5,000 individuals. The CDC uses a [sampling strategy](http://www.cdc.gov/nchs/data/series/sr_02/sr02_162.pdf) to purposefully oversample certain subpopulations like racial minorities. Naive analysis of the original NHANES data can lead to mistaken conclusions because the percentages of people from each racial group in the data are different from general population. The 5,000 individuals here are resampled from the larger NHANES study population to undo these oversampling effects, so you can treat this as if it were a simple random sample from the American population.
+
+Let's read in the data to an object called `nh` and take a look with `View`. Remember, we need to load both the dplyr and readr packages (or tidyverse) for efficiently reading in and displaying this data.
+
+```{r readNH}
+
+# Read in downloaded data using readr package
+nh <- read_csv(file="nhanes.csv")
+
+# Show the first few lines of the data and the dimensions
+nh
+
+# Optionally bring up data in a viewer window.
+# View(nh)
+```
+
+This particular excerpt has 5000 observations of 32 variables. We know from our lesson this morning that this dataset contains both children and adults. For us to do analyses with these data, let's focus on adults only.
+
+```{r}
+nha <- nh %>%
+  filter(Age >= 18)
+nha
+```
+
+Notice that many variables have been read in as characters. For some analyses, we will need these variables to be grouped categorical variables, called factors.
+
+```{r}
+class(nha$Race)
+levels(nha$Race)
+
+#create factor variables
+nha <- nha %>%
+  mutate_if(is.character, as.factor)
+
+class(nha$Race)
+levels(nha$Race)
+```
+
+### Missing data
+
+### T-tests 
+T-tests analyze the difference in 2 group means
+
+Let's say we want to analyze the difference in height between males and females
+
+Assumptions of t-test and how to assess
+1. random sampling-- met
+1. independent samples -- met
+1. equal variance -- ?
+1. normality -- ?
+
+Assessing normality and equal variance in one plot
+```{r}
+#create overlapping density plots of height colored by gender
+nha %>%
+  ggplot(aes(Height)) + geom_density(aes(fill = Gender, alpha = .5))
+
+#normality is best assessed using a qq plot
+males <- nha %>% filter(Gender == "male")
+females <- nha %>% filter(Gender == "female")
+qqnorm(males$Height, pch = 16)
+qqnorm(females$Height, pch = 16)
+qqline(females$Height)
+
+#shapiro wilk test of normality
+shapiro.test(males$Height)
+shapiro.test(females$Height)
+
+#ks.test = Kolmogorov-Smirnov
+```
+
+Now that we know what test to run, run it
+
+```{r}
+# equal variance, independent samples t-test
+?t.test()
+t.test(Height ~ Gender, data = nha, var.equal = TRUE)
+```
+
+What to do if normality assumption is not met? What about equal var?
+
+```{r}
+#Exercise 2
+# is there a difference in AlcoholYear by relationship status?
+
+nha %>%
+  filter(RelationshipStatus != "NA") %>%
+  ggplot(aes(AlcoholYear)) + geom_density(aes(fill = RelationshipStatus, alpha = .3))
+
+#based on plots, do wilcox
+wilcox.test(AlcoholYear ~ RelationshipStatus, data = nha)
+
+?wilcox.test
+
+#calculate median for each group
+nha %>%
+  group_by(RelationshipStatus) %>%
+  summarize(median(AlcoholYear, na.rm = TRUE))
+
+nha %>%
+  group_by(RelationshipStatus) %>%
+  summarize(mean(AlcoholYear, na.rm = TRUE))
+```
+
+```{r}
+#############
+#ANOVA and LM
+
+#BMI and relationship status
+t.test(BMI ~ RelationshipStatus, data = nha, var.equal = TRUE)
+
+#same question as a linear model
+fit <- lm(BMI ~ RelationshipStatus, data = nha)
+fit
+anova(fit) #running an ANOVA
+summary(fit)
+
+#############
+#ANOVA with 3 groups
+#BMI by smoking status
+
+levels(nha$SmokingStatus)
+
+fit <- lm(BMI ~ SmokingStatus, data = nha)
+anova(fit)
+summary(fit)
+
+#change reference category to Never
+nha$SmokingStatus <- factor(nha$SmokingStatus, levels = c("Never", "Former", "Current"))
+
+levels(nha$SmokingStatus)
+
+fit <- lm(BMI ~ SmokingStatus, data = nha)
+anova(fit)
+summary(fit)
+
+#check out Tukey's multiple comparisons
+TukeyHSD(aov(fit))
+
+###show results
+nha %>%
+  ggplot(aes(SmokingStatus, BMI)) + geom_boxplot()
+
+###### Linear model with 2 continuous variables
+#Weight ~ Height
+fit <- lm(Weight ~ Height, data = nha)
+summary(fit)
+#for each 1 cm increase in Height, we have a .92 kg increase in weight
+
+#plot these results
+nha %>%
+  ggplot(aes(Height, Weight)) + geom_point() + geom_smooth(method = "lm")
+
+###assumptions of linear model
+#random sampling
+# x and y are related by a a straight line
+#residuals are independent
+# normality of residuals
+# equal variance of residuals (variance is constant across X)
+plot(fit)
+
+######
+#Multiple regression
+#Testosterone ~ PhysActive
+
+fit <- lm(Testosterone ~ PhysActive, data = nha)
+summary(fit)
+
+# add in Age
+fit <- lm(Testosterone ~ PhysActive + Age, data = nha)
+summary(fit)
+
+#add in Gender
+fit <- lm(Testosterone ~ PhysActive + Age + Gender, data = nha)
+summary(fit)
+
+##########################
+#Exercise 3
+# Income ~ Work
+fit <- lm(Income ~ Work, data = nha)
+fit
+#anova
+anova(fit)
+
+#Tukey
+plot(TukeyHSD(aov(fit)))
+
+#summary()
+summary(fit)
+```
