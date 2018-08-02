@@ -53,7 +53,9 @@ nha <- nh %>%
 nha
 ```
 
-Notice that many variables have been read in as characters. For some analyses, we will need these variables to be grouped categorical variables, called factors.
+A note on characters versus factors: One thing that you immediately notice is that all the categorical variables are read in as _character_ data types. This data type is used for storing strings of text, for example, IDs, names, descriptive text, etc. There's another related data type called _**factors**_. 
+
+Factor variables are used to represent categorical variables with two or more _levels_, e.g., "male" or "female" for Gender, or "Single" versus "Committed" for RelationshipStatus. For the most part, statistical analysis treats these two data types the same. It's often easier to leave categorical variables as characters. However, in some cases you may get a warning message alerting you that a character variable was converted into a factor variable during analysis. Generally, these warnings are nothing to worry about. You can, if you like, convert individual variables to factor variables, or simply use dplyr's `mutate_if` to convert all character vectors to factor variables:
 
 ```{r}
 class(nha$Race)
@@ -92,12 +94,6 @@ females <- nha %>% filter(Gender == "female")
 qqnorm(males$Height, pch = 16)
 qqnorm(females$Height, pch = 16)
 qqline(females$Height)
-
-#shapiro wilk test of normality
-shapiro.test(males$Height)
-shapiro.test(females$Height)
-
-#ks.test = Kolmogorov-Smirnov
 ```
 
 Now that we know what test to run, run it
@@ -133,10 +129,9 @@ nha %>%
   summarize(mean(AlcoholYear, na.rm = TRUE))
 ```
 
-```{r}
-#############
-#ANOVA and LM
+### ANOVA and LM
 
+```{r}
 #BMI and relationship status
 t.test(BMI ~ RelationshipStatus, data = nha, var.equal = TRUE)
 
@@ -145,9 +140,11 @@ fit <- lm(BMI ~ RelationshipStatus, data = nha)
 fit
 anova(fit) #running an ANOVA
 summary(fit)
+```
 
-#############
-#ANOVA with 3 groups
+### ANOVA with 3 groups
+
+```{r}
 #BMI by smoking status
 
 levels(nha$SmokingStatus)
@@ -189,9 +186,11 @@ nha %>%
 # normality of residuals
 # equal variance of residuals (variance is constant across X)
 plot(fit)
+```
 
-######
-#Multiple regression
+### Multiple regression
+
+```{r}
 #Testosterone ~ PhysActive
 
 fit <- lm(Testosterone ~ PhysActive, data = nha)
@@ -219,3 +218,5 @@ plot(TukeyHSD(aov(fit)))
 #summary()
 summary(fit)
 ```
+
+### Logistic Regression
