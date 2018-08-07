@@ -501,11 +501,16 @@ nh %>%
 ** YOUR TURN **
 Practice creating the plots pictured below
 
-A. ![No = not physically active, Yes = physically active](plots/Plot4a.png)
+A. 
+![](plots/Plot4a.png)
+No = not physically active, Yes = physically active
 
-B. ![Custom colors are "salmon" and "seagreen"](plots/Plot4b.png)
+B. 
+![](plots/Plot4b.png)
+Custom colors are "salmon" and "seagreen"
 
-C. ![](plots/Plot4c.png) 
+C. 
+![](plots/Plot4c.png) 
 
 ```{r ex}
 #A
