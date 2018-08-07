@@ -279,12 +279,12 @@ Let's look at BMI by Smoking Status
 nh %>%
   ggplot(aes(x = SmokingStatus, y = BMI))
 
-#try with geom point
+# try with geom point
 nh %>%
   ggplot(aes(x = SmokingStatus, y = BMI)) + geom_point()
 # no variability in X values --> overplotting
 
-# so add some random variability to x-axis
+# so add some random variability to x-axis using geom_jitter()
 nh %>%
   ggplot(aes(x = SmokingStatus, y = BMI)) + geom_jitter()
 ```
@@ -480,6 +480,8 @@ nh %>%
   filter(!is.na(SmokingStatus)) %>%
   ggplot(aes(x = SmokingStatus, y = BMI)) + 
   geom_boxplot(aes(fill = Diabetes))
+
+# colors()
 
 #change colors manually
 nh %>%
