@@ -8,7 +8,7 @@ output: github_document
 # AFTERNOON SESSION
 ### Analysis in R
 
-This session will cover the basics of data analysis in R. We will go over descriptive statistics, missing data, and inferential statistics including hypothesis testing and assessing assumptions.
+This session will cover the basics of data analysis in R. We will go over descriptive and inferential statistics including hypothesis testing and assessing assumptions.
 
 This lesson assumes a basic familiarity with R, data frames, and manipulating data with tidyr, dplyr and the pipe `%>%`, and ggplot2.
 
@@ -53,6 +53,12 @@ nha <- nh %>%
 nha
 ```
 
+So that we don't get confused between the original nh and the nh adults dataset, let's remove the original
+```{r}
+rm(nh)
+```
+
+
 A note on characters versus factors: One thing that you immediately notice is that all the categorical variables are read in as _character_ data types. This data type is used for storing strings of text, for example, IDs, names, descriptive text, etc. There's another related data type called _**factors**_. 
 
 Factor variables are used to represent categorical variables with two or more _levels_, e.g., "male" or "female" for Gender, or "Single" versus "Committed" for RelationshipStatus. For the most part, statistical analysis treats these two data types the same. It's often easier to leave categorical variables as characters. However, in some cases you may get a warning message alerting you that a character variable was converted into a factor variable during analysis. Generally, these warnings are nothing to worry about. You can, if you like, convert individual variables to factor variables, or simply use dplyr's `mutate_if` to convert all character vectors to factor variables:
@@ -69,154 +75,556 @@ class(nha$Race)
 levels(nha$Race)
 ```
 
-### Missing data
+### Descriptive Statistics
+
+Descriptive statistics are used to describe the basic features of the data. They provide simple summaries about the sample and the measures.
+
+You could do the below operations using dplyr, but remember, this returns a single-row, single-column tibble, _not_ a single scalar value like the above. This is only really useful in the context of grouping and summarizing, so here we will mostly use base R functions.
+
+```{r}
+# mean BMI
+mean(nha$BMI)
+
+# measures of the center
+mean(nha$BMI, na.rm = TRUE)
+median(nha$BMI, na.rm = TRUE) # right skewed
+
+# histogram to see distribution
+nha %>%
+  ggplot(aes(BMI)) + geom_histogram()
+
+#measures of spread
+sd(nha$BMI, na.rm = TRUE)
+quantile(nha$BMI, na.rm = TRUE)
+quantile(nha$BMI, probs = c(.25, .75), na.rm = TRUE)
+range(nha$BMI, na.rm = TRUE)
+```
+
+If you run `summary()` on a data frame, you get some very basic summary statistics on each variable in the data.
+
+```{r}
+# summary
+summary(nha)
+```
+
+The `summary()` function is different from **dplyr**'s `summarize()`. It works differently depending on which kind of object you pass to it. 
+
+For categorical variables, calculating a mean or standard deviation does not make sense. Instead, we can tabulate the frequencies of each level of the categorical variable.
+
+```{r}
+#descriptive stats for discrete variables
+table(nha$Race)
+
+#cross tabulation
+table(nha$Gender, nha$Race) 
+```
+
+### ** EXERCISE 1 **
+** YOUR TURN **
+
+A. Calculate the median Income in the NHA dataset
+
+B. Find the variance of Weight
+
+C. What is the range of Pulse?
+
+D. Create a density plot showing BMI colored and faceted by Education level
+
+```{r}
+#A.
+median(nha$Income, na.rm = TRUE)
+
+#B.
+var(nha$Weight, na.rm = TRUE)
+
+#C.
+range(nha$Pulse, na.rm = TRUE)
+
+#D
+nha %>%
+  ggplot(aes(BMI)) + geom_density(aes(color = Education)) +
+  facet_wrap(~ Education)
+```
+
 
 ### T-tests 
-T-tests analyze the difference in 2 group means
 
-Let's say we want to analyze the difference in height between males and females
+Slides 
 
-Assumptions of t-test and how to assess
-1. random sampling-- met
-1. independent samples -- met
-1. equal variance -- ?
-1. normality -- ?
+Let's do a few two-sample t-tests to test for the _difference in means between two groups_. The function for a t-test is `t.test()`. See the help for `?t.test`.
 
-Assessing normality and equal variance in one plot
+1. Are there differences in height for males versus females in this dataset?
+
+To assess this question, first we make sure that a t-test is the correct type of analysis. A t-test tests the difference in 2 means - yes that is what we want to do. Next we need to decide what type of t-test we need to perform by thinking through the assumptions. Domain specific knowledge and exploratory data analyses will help here.
+
+Random sampling -- YES
+
+Independent samples -- YES (men and women are different people - unrelated). Would be paired t-test if we were assessing height of husband-wife pairs or brother-sister pairs
+
+Normality -- ?? well, we need to assess this. We'll discuss this in a few minutes.
+
+Equal variance. Also called homoscedasticity of variances.
+?? we could think about the populations of men and women and what we know about height and conclude reasonably that the variance is equal for height
+
+Density plots are an excellent way to assess normality and equal variance all in one plot
 ```{r}
 #create overlapping density plots of height colored by gender
 nha %>%
   ggplot(aes(Height)) + geom_density(aes(fill = Gender, alpha = .5))
-
-#normality is best assessed using a qq plot
-males <- nha %>% filter(Gender == "male")
-females <- nha %>% filter(Gender == "female")
-qqnorm(males$Height, pch = 16)
-qqnorm(females$Height, pch = 16)
-qqline(females$Height)
 ```
 
-Now that we know what test to run, run it
+Normality can be assessed graphically or via hypothesis tests. There are pros and cons to either approach. 
+
+Graphically, we could look at a histogram or density plot (like we did above), a boxplot, or a more specialized plot to assess normality called a QQ plot (quantile-quantile plot or quantile comparison plot or normal probability plot). A qq plot graphs the expected data value given a normal distribution on the X axis against the observed data value on the y axis. 
+
+Let's have a look for height:
+
+```{r}
+#normality is best assessed using qq plots for each sex
+nha %>%
+  ggplot(aes(sample = Height)) + 
+  geom_qq() +
+  facet_wrap(~Gender)
+```
+
+Certain fields love hypothesis tests of normality and sometimes reviewers will specifically request one. There is a theoretical problem with trying to _prove_ a null hypothesis and they are known to reject the null when sample sizes are large. My best advice is to use your brain, subject matter expertise, and graphical assessments as much as possible, but in case you are forced to do a hypothesis test for normality check out shapiro.test()
+
+The least awful seems to be the Shapiro-Wilk (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3693611/) but there are several options (Kolmogorov-Smirnov, Anderson-Darling, Lillefors). We will not spend time to cover those here because the field is moving towards qq plots.
+
+Now that we know what test to run, let's run it
 
 ```{r}
 # equal variance, independent samples t-test
 ?t.test()
 t.test(Height ~ Gender, data = nha, var.equal = TRUE)
+
+# if we didn't have normality met, run wilcox.test
+wilcox.test(Height ~ Gender, data = nha)
 ```
 
-What to do if normality assumption is not met? What about equal var?
+### ** EXERCISE 2 **
+** YOUR TURN **
+Still using the adults (`nha`) dataset, use a test of 2 means to assess whether single or married/cohabitating people (using the RelationshipStatus variable) drink more alcohol (AlcoholYear). (Please feel free to ask for help)
 
+A. First, create plot to explore the distribution of the variables and the relationship between these two variables.
+
+B. Next, consider test assumptions to decide what analysis to run.
+
+C. Run the analysis. Is the association between relationship status and alcohol consumption statistically significant? If so, which group drinks more often?
 ```{r}
-#Exercise 2
-# is there a difference in AlcoholYear by relationship status?
-
+#A.
 nha %>%
-  filter(RelationshipStatus != "NA") %>%
-  ggplot(aes(AlcoholYear)) + geom_density(aes(fill = RelationshipStatus, alpha = .3))
+  filter(!is.na(RelationshipStatus)) %>%
+  ggplot(aes(AlcoholYear)) + 
+  geom_density(aes(fill = RelationshipStatus, alpha = .3))
 
-#based on plots, do wilcox
+#B&C based on plots, do wilcox
 wilcox.test(AlcoholYear ~ RelationshipStatus, data = nha)
 
-?wilcox.test
-
-#calculate median for each group
+#calculate median and IQR for each group
 nha %>%
   group_by(RelationshipStatus) %>%
-  summarize(median(AlcoholYear, na.rm = TRUE))
-
-nha %>%
-  group_by(RelationshipStatus) %>%
-  summarize(mean(AlcoholYear, na.rm = TRUE))
+  summarize(medAlc = median(AlcoholYear, na.rm = TRUE),
+            Q1Alc = quantile(AlcoholYear, probs = .25, na.rm = TRUE),
+            Q3Alc = quantile(AlcoholYear, probs = .75, na.rm = TRUE))
 ```
 
 ### ANOVA and LM
 
-```{r}
-#BMI and relationship status
-t.test(BMI ~ RelationshipStatus, data = nha, var.equal = TRUE)
+See slides
 
-#same question as a linear model
+> Analysis of variance and linear modeling are complex topics that deserve an entire semester dedicated to theory, design, and interpretation. A very good resource is [_An Introduction to Statistical Learning: with Applications in R_](https://www.amazon.com/Introduction-Statistical-Learning-Applications-Statistics/dp/1461471370/ref=sr_1_1?ie=UTF8&qid=1473087847&sr=8-1&keywords=introduction+statistical+learning&tag=gettgenedone-20) by Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani. The [PDF](http://www-bcf.usc.edu/~gareth/ISL/ISLR%20Sixth%20Printing.pdf) of the book and all the R code used throughout are [available **free** on the author's website](http://www-bcf.usc.edu/~gareth/ISL/). What follows is a necessary over-simplification with more focus on implementation, and less on theory and design.
+
+Where t-tests and their nonparametric substitutes are used for assessing the differences in means between two groups, ANOVA is used to assess the significance of differences in means between multiple groups. In fact, a t-test is just a specific case of ANOVA when you only have two groups. And both t-tests and ANOVA are just specific cases of linear regression, where you're trying to fit a model describing how a continuous outcome (e.g., BMI) changes with some predictor variable (e.g., diabetic status, race, age, etc.). The distinction is largely semantic -- with a linear model you're asking, "do levels of a categorical variable affect the response?" where with ANOVA or t-tests you're asking, "does the mean response differ between levels of a categorical variable?"
+
+Let's examine the relationship between BMI and relationship status (`RelationshipStatus` was derived from `MaritalStatus`, coded as _Committed_ if MaritalStatus is Married or LivePartner, and _Single_ otherwise). Let's first do this with a t-test, and for now, let's assume that the variances between groups _are_ equal.
+
+```{r}
+# t-test with equal variance for BMI explained by relationship status
+t.test(BMI ~ RelationshipStatus, data = nha, var.equal = TRUE)
+```
+
+It looks like single people have a very slightly higher BMI than those in a committed relationship, but the magnitude of the difference is trivial, and the difference is not significant. Now, let's do the same test in a linear modeling framework. First, let's create the fitted model and store it in an object called `fit`. 
+
+```{r}
+# Same question run in a linear model framework
 fit <- lm(BMI ~ RelationshipStatus, data = nha)
 fit
-anova(fit) #running an ANOVA
 summary(fit)
 ```
 
-### ANOVA with 3 groups
+>_**A note on dummy coding:**_ If you have a $k$-level factor, R creates $k-1$ dummy variables, or indicator variables, by default, using the alphabetically first level as baseline. For example, the levels of RelationshipStatus are "Committed" and "Single". R creates a dummy variable called "RelationshipStatusSingle" that's **0** if you're committed, and **1** if you're Single. The linear model is saying for every unit increase in RelationshipStatusSingle, i.e., going from committed to single, results in a 0.341-unit increase in BMI. You can change the ordering of the factors to change the interpretation of the model (e.g., treating Single as baseline and going from Single to Committed). We'll do this in the next section.
 
 ```{r}
-#BMI by smoking status
+# same question run as an ANOVA
+anova(fit)
+```
 
+Now notice a few things:
+1. The p-values from all three tests (t-test, ANOVA, and linear regression) are all identical (p=0.1256). This is because they're all identical: a t-test is a specific case of ANOVA, which is a specific case of linear regression. 
+
+1. The test statistics are all related. The _t_ statistic from the t-test is **1.532**, which is the same as the t-statistic from the linear regression. If you square that, you get **2.347**, the _F_ statistic from the ANOVA. 
+1. The `t.test()` output shows you the means for the two groups, Committed and Single. Just displaying the `fit` object itself or running `summary(fit)` shows you the coefficients for a linear model. Here, the model assumes the "baseline" RelationshipStatus level is _Committed_ (first alphabetically), and that the _intercept_ in a regression model (e.g., $\beta_{0}$ in the model $Y = \beta_{0} +  \beta_{1}X$) is the mean of the baseline group (28.51 is the mean BMI for Committed people). Being _Single_ results in an increase in BMI of 0.3413. This is the $\beta_{1}$ coefficient in the model. You can easily change the ordering of the levels. See the help for `?factor`, and check out the new [**forcats** package](http://forcats.tidyverse.org/), which provides tools **for** manipulating **cat**egorical variables.
+
+
+### ANOVA with 3 groups
+
+Recap: t-tests are for assessing the differences in means between _two_ groups. A t-test is a specific case of ANOVA, which is a specific case of a linear model. Let's run ANOVA, but this time looking for differences in means between more than two groups.
+
+Let's look at the relationship between smoking status (Never, Former, or Current), and BMI.
+
+```{r}
+# levels of smoking status
 levels(nha$SmokingStatus)
 
+# create the fit and then look at the ANOVA summary
 fit <- lm(BMI ~ SmokingStatus, data = nha)
 anova(fit)
 summary(fit)
+```
 
+The F-test on the ANOVA table tells us that there _is_ a significant difference in means between current, former, and never smokers (p=$4.54 \times 10^{-8}$). However, the linear model output might not have been what we wanted. Because the default handling of categorical variables is to treat the alphabetical first level as the baseline, "Current" smokers are treated as baseline, and this mean becomes the intercept, and the coefficients on "Former" and "Never" describe how those groups' means differ from current smokers. 
+
+What if we wanted "Never" smokers to be the baseline, followed by Former, then Current? Have a look at `?factor` and `?relevel` to change the factor levels.
+
+```{r}
 #change reference category to Never
 nha$SmokingStatus <- factor(nha$SmokingStatus, levels = c("Never", "Former", "Current"))
 
+#check re-leveling
 levels(nha$SmokingStatus)
 
+# re-create the fit and ANOVA summary
 fit <- lm(BMI ~ SmokingStatus, data = nha)
 anova(fit)
 summary(fit)
+```
 
-#check out Tukey's multiple comparisons
+Notice that the p-value on the ANOVA/regression didn't change, but the coefficients did. _Never_ smokers are now treated as baseline. The intercept coefficient (28.856) is now the mean for _Never_ smokers. The `SmokingStatusFormer` coefficient of .309 shows the apparent increase in BMI that former smokers have when compared to never smokers, but that difference is not significant (p=.24). The `SmokingStatusCurrent` coefficient of -1.464 shows that current smokers actually have a lower BMI than never smokers, and that this decrease is highly significant.
+
+Finally, you can do the typical post-hoc ANOVA procedures on the fit object. For example, the `TukeyHSD()` function will run [_Tukey's test_](https://en.wikipedia.org/wiki/Tukey%27s_range_test) (also known as _Tukey's range test_, the _Tukey method_, _Tukey's honest significance test_, _Tukey's HSD test_ (honest significant difference), or the _Tukey-Kramer method_). Tukey's test computes all pairwise mean difference calculation, comparing each group to each other group, identifying any difference between two groups that's greater than the standard error, while controlling the type I error for all multiple comparisons. First run `aov()` (**not** `anova()`) on the fitted linear model object, then run `TukeyHSD()` on the resulting analysis of variance fit.
+
+```{r}
+# check out Tukey's multiple comparisons
 TukeyHSD(aov(fit))
+plot(TukeyHSD(aov(fit)))
+```
 
-###show results
+This shows that there isn't much of a difference between former and never smokers, but that both of these differ significantly from current smokers, who have significantly lower BMI. 
+
+Finally, let's visualize the differences in means between these groups. The **NA** category, which is omitted from the ANOVA, contains all the observations who have missing or non-recorded Smoking Status. 
+
+```{r}
+# plot results
 nha %>%
   ggplot(aes(SmokingStatus, BMI)) + geom_boxplot()
 
-###### Linear model with 2 continuous variables
-#Weight ~ Height
+# plot results without NA bc ANOVA automatically removed those
+nha %>%
+  filter(!is.na(SmokingStatus)) %>%
+  ggplot(aes(SmokingStatus, BMI)) + geom_boxplot()
+```
+
+### Linear model with 2 continuous variables
+
+See slides
+
+Linear models are mathematical representations of the process that (_we think_) gave rise to our data. The model seeks to explain the relationship between a variable of interest, our _Y_, _outcome_, _response_, or _dependent_ variable, and one or more _X_, _predictor_, or _independent_ variables. Previously we talked about t-tests or ANOVA in the context of a simple linear regression model with only a single predictor variable, $X$:
+
+$$Y = \beta_{0} +  \beta_{1}X$$
+
+But you can have multiple predictors in a linear model that are all additive, accounting for the effects of the others:
+
+$$Y = \beta_{0} +  \beta_{1}X_{1} + \beta_{2}X_{2} + \epsilon$$
+
+- $Y$ is the response 
+- $X_{1}$ and $X_{2}$ are the predictors
+- $\beta_{0}$ is the intercept, and $\beta_{1}$, $\beta_{2}$ etc are _coefficients_ that describe what 1-unit changes in $X_{1}$ and $X_{2}$ do to the outcome variable $Y$.
+- $\epsilon$ is random error. Our model will not perfectly predict $Y$. It will be off by some random amount. We assume this amount is a random draw from a Normal distribution with mean 0 and standard deviation $\sigma$.
+
+_Building a linear model_ means we propose a linear model and then estimate the coefficients and the variance of the error term. Above, this means estimating $\beta_{0}, \beta_{1}, \beta_{2}$ and $\sigma$. This is what we do in R.
+
+Let's look at the relationship between height and weight.
+```{r}
+# Create LM fit object
 fit <- lm(Weight ~ Height, data = nha)
 summary(fit)
 #for each 1 cm increase in Height, we have a .92 kg increase in weight
+#confint(fit) #to get out confidence intervals for LM
+```
 
+The relationship is highly significant (P<$2.2 \times 10^{-16}$). The intercept term is not very useful most of the time. Here it shows us what the value of Weight would be when Height=0cm, which could never happen. The Height coefficient is meaningful -- each one cm increase in height results in a 0.92 kg increase in weight. Let's visualize that relationship:
+
+```{r}
 #plot these results
 nha %>%
   ggplot(aes(Height, Weight)) + geom_point() + geom_smooth(method = "lm")
+```
 
-###assumptions of linear model
-#random sampling
-# x and y are related by a a straight line
-#residuals are independent
-# normality of residuals
-# equal variance of residuals (variance is constant across X)
+By default, this is only going to show the prediction over the range of the data. This is important! You never want to try to extrapolate response variables outside of the range of your predictor(s). For example, the linear model tells us that weight is -73.7kg when height is zero cm. We could extend the predicted model / regression line past the lowest value of the data down to height=0. The bands on the confidence interval tell us that the model is apparently confident within the regions defined by the gray boundary. But this is silly -- we would never see a height of zero, and predicting past the range of the available training data is never a good idea.
+
+After we have fit a model, we need to assess whether the assumptions of linear modeling have been met before we know whether we have a good model or not. We will not have time to go through the assumptions in depth here, but generally they are:
+1. Random sampling
+1. x and y are related by a a straight line
+1. residuals are independent from each other
+1. residuals are distributed normally
+1. equal variance of residuals (variance is constant across X)
+
+
+Phew. That is a lot of assumptions. Luckily, R has a wonderful built-in plot function to help you assess the assumptions.
+```{r}
 plot(fit)
 ```
 
 ### Multiple regression
 
+Next, let's do a multiple linear regression analysis, where we attempt to model the effect of multiple predictor variables at once on some continuous outcome. First, let's look at the effect of physical activity on testosterone levels. Let's do this with a t-test and linear regression, showing that you get the same results.
+
 ```{r}
-#Testosterone ~ PhysActive
+t.test(Testosterone~PhysActive, data=nha, var.equal=TRUE)
+summary(lm(Testosterone~PhysActive, data=nha))
+```
 
-fit <- lm(Testosterone ~ PhysActive, data = nha)
-summary(fit)
+In both cases, the p-value is significant (p=0.01516), and the result suggest that increased physical activity is associated with increased testosterone levels. Does increasing your physical activity increase your testosterone levels? Or is it the other way -- will increased testosterone encourage more physical activity? Or is it none of the above -- is the apparent relationship between physical activity and testosterone levels only apparent because both are correlated with yet a third, unaccounted for variable? Let's throw Age into the model as well.
 
-# add in Age
-fit <- lm(Testosterone ~ PhysActive + Age, data = nha)
-summary(fit)
+```{r}
+summary(lm(Testosterone~PhysActive+Age, data=nha))
+```
 
-#add in Gender
-fit <- lm(Testosterone ~ PhysActive + Age + Gender, data = nha)
-summary(fit)
+This shows us that after accounting for age that the testosterone / physical activity link is no longer significant. Every 1-year increase in age results in a highly significant decrease in testosterone, and since increasing age is also likely associated with decreased physical activity, perhaps age is the  confounder that makes this relationship apparent.
 
-##########################
-#Exercise 3
-# Income ~ Work
+Adding other predictors can also swing things the other way. We know that men have much higher testosterone levels than females. Sex is probably the single best predictor of testosterone levels in our dataset. By not accounting for this effect, our unaccounted-for variation remains very high (low $$R^{2}$$). By accounting for Gender, we now reduce the residual error in the model, and the physical activity effect once again becomes significant. Also notice that our model fits much better (higher R-squared), and is much more significant overall.
+
+```{r}
+summary(lm(Testosterone ~ PhysActive+Age+Gender, data=nha))
+```
+
+We've only looked at the [`summary()`](http://stat.ethz.ch/R-manual/R-patched/library/stats/html/summary.lm.html) and [`anova()`](http://stat.ethz.ch/R-manual/R-patched/library/stats/html/anova.lm.html) functions for extracting information from an [`lm` class object](http://stat.ethz.ch/R-manual/R-patched/library/stats/html/lm.html). There are several other accessor functions that can be used on a linear model object. Check out the help page for each one of these to learn more.
+
+- [`coefficients()`](http://stat.ethz.ch/R-manual/R-patched/library/stats/html/coef.html)
+- [`predict.lm()`](http://stat.ethz.ch/R-manual/R-patched/library/stats/html/predict.lm.html)
+- [`fitted.values()`](http://stat.ethz.ch/R-manual/R-patched/library/stats/html/fitted.values.html)
+- [`residuals()`](http://stat.ethz.ch/R-manual/R-patched/library/stats/html/residuals.html)
+
+### ** EXERCISE 3 **
+** YOUR TURN **
+
+The `Work` variable is coded "Looking" (n=159), "NotWorking" (n=1317), and "Working" (n=2230).
+
+A. Fit a linear model of `Income` against `Work`. Assign this to an object called `fit`. What does the `fit` object tell you when you display it directly?
+
+B. Run an `anova()` to get the ANOVA table. Is the model significant?
+
+C. Run a Tukey test to get the pairwise contrasts. (Hint: `TukeyHSD()` on `aov()` on the fit). What do you conclude?
+
+D. Instead of thinking of this as ANOVA, think of it as a linear model. After you've thought about it, get some `summary()` statistics on the fit. Do these results jibe with the ANOVA model?  
+
+```{r}
+#A. Income ~ Work
 fit <- lm(Income ~ Work, data = nha)
 fit
-#anova
+
+#B. anova
 anova(fit)
 
-#Tukey
+#C. Tukey
 plot(TukeyHSD(aov(fit)))
 
-#summary()
+#D. summary()
 summary(fit)
 ```
 
-### Logistic Regression
+## DISCRETE VARIABLE ANALYSES
+
+So far we have covered:
+1. T-tests -- analyzing differences in one continuous variable between 2 groups
+2. ANOVA -- analyzing differences in one continuous variable between 3+ groups
+3. LM -- analyzing the impact of one continuous variable on another continuous variable
+4. Multiple regression -- analyzing the impact of several continuous variables on another continuous variable
+
+In all of these cases, the dependent variable, i.e., the outcome, or $Y$ variable, was _continuous_, and usually normally distributed. What if our outcome variable is _discrete_, e.g., "Yes/No", "Mutant/WT", "Case/Control", etc.? Here we use a different set of procedures for assessing significant associations.
+
+### Contingency tables
+
+The [`xtabs()`](http://stat.ethz.ch/R-manual/R-patched/library/stats/html/xtabs.html) function is useful for creating contingency tables from categorical variables. Let's create a gender by diabetes status contingency table, and assign it to an object called **`xt`**. After making the assignment, type the name of the object to view it.
+
+```{r}
+xt <- xtabs(~Gender+Diabetes, data=nha)
+xt
+```
+
+There are two useful functions, `addmargins()` and `prop.table()` that add more information or manipulate how the data is displayed. By default, `prop.table()` will divide the number of observations in each cell by the total. But you may want to specify _which margin_ you want to get proportions over. Let's do this for the first (row) margin.
+
+```{r}
+# Add marginal totals
+addmargins(xt)
+
+# Get the proportional table
+prop.table(xt)
+#each cell divided by grand total
+# That isn't really what we want
+
+# Do this over the first (row) margin only.
+?prop.table
+prop.table(xt, margin=1)
+```
+
+Looks like men have slightly higher rates of diabetes than women. But is this significant?
+
+The chi-square test is used to assess the independence of these two factors. That is, if the null hypothesis that gender and diabetes are independent is true, the we would expect a proportionally equal number of diabetics across each sex. Males seem to be at slightly higher risk than females, but the difference is just short of statistically significant.
+
+```{r}
+chisq.test(xt)
+```
+
+An alternative to the chi-square test is [Fisher's exact test](https://en.wikipedia.org/wiki/Fisher%27s_exact_test). Rather than relying on a critical value from a theoretical chi-square distribution, Fisher's exact test calculates the _exact_ probability of observing the contingency table as is. It's especially useful when there are very small _n_'s in one or more of the contingency table cells. Both the chi-square and Fisher's exact test give us p-values of approximately 0.06.
+
+```{r}
+fisher.test(xt)
+```
+
+Let's create a different contingency table, this time looking at the relationship between race and whether the person had health insurance. Display the table with marginal totals.
+
+```{r}
+xt <- xtabs(~Race+Insured, data=nha)
+addmargins(xt)
+```
+
+Let's do the same thing as above, this time showing the proportion of people in each race category having health insurance.
+
+```{r}
+prop.table(xt, margin=1)
+```
+
+Now, let's run a chi-square test for independence.
+
+```{r}
+chisq.test(xt)
+```
+
+The result is _highly_ significant. In fact, so significant, that the display rounds off the p-value to something like $<2.2 \times 10^{-16}$. If you look at the help for [`?chisq.test`](https://stat.ethz.ch/R-manual/R-patched/library/stats/html/chisq.test.html) you'll see that displaying the test only shows you summary information, but other components can be accessed. For example, we can easily get the actual p-value, or the expected counts under the null hypothesis of independence.
+
+```{r}
+chisq.test(xt)$p.value
+chisq.test(xt)$expected
+```
+
+We can also make a helpful plot for visualizing categorical data called a mosaic plot: (this is a base R plot, not ggplot2)
+
+```{r, fig.width=8}
+mosaicplot(xt, main=NA)
+```
+Now we can easily see the proportion of each Race that is insured
+
+### Logistic regression
+
+See slides
+
+What if we wanted to model the discrete outcome, e.g., whether someone is insured, against several other variables, similar to how we did with multiple linear regression? We can't use linear regression because the outcome isn't continuous -- it's binary, either _Yes_ or _No_. For this we'll use _logistic regression_ to model the _log odds_ of binary response. That is, instead of modeling the outcome variable, $Y$, directly against the inputs, we'll model the _log odds_ of the outcome variable.
+
+If $p$ is the probability that the individual is insured, then $\frac{p}{1-p}$ is the [_odds_](https://en.wikipedia.org/wiki/Odds) that person is insured. Then it follows that the linear model is expressed as:
+
+$$log(\frac{p}{1-p}) = \beta_0 + \beta_1 x_1 + \cdots + \beta_k x_k$$
+
+Where $\beta_0$ is the intercept, $\beta_1$ is the increase in the odds of the outcome for every unit increase in $x_1$, and so on.
+
+Logistic regression is a type of _generalized linear model_ (GLM). We fit GLM models in R using the `glm()` function. It works like the `lm()` function except we specify which GLM to fit using the `family` argument. Logistic regression requires `family=binomial`.
+
+The typical use looks like this:
+
+```{r}
+# mod <- glm(y ~ x, data=yourdata, family='binomial')
+# summary(mod)
+```
+
+Before we fit a logistic regression model let's _relevel_ the Race variable so that "White" is the baseline. We saw above that people who identify as "White" have the highest rates of being insured. When we run the logistic regression, we'll get a separate coefficient (effect) for each level of the factor variable(s) in the model, telling you change in log odds that that level has, _as compared to the baseline group_.
+
+```{r, results="hide"}
+#Look at Race. The default ordering is alphabetical
+levels(nha$Race)
+
+# Let's relevel that where the group with the highest rate of insurance is "baseline"
+relevel(nha$Race, ref="White")
+
+# If we're happy with that result, permanently change it using dplyr
+nha <- nha %>% 
+  mutate(Race=relevel(Race, ref="White"))
+```
+
+Now, let's fit a logistic regression model assessing how the odds of being insured change with different levels of race. 
+
+```{r}
+fit <- glm(Insured~Race, data=nha, family="binomial")
+summary(fit)
+```
+
+The `Estimate` column shows the log of the odds ratio -- how the log odds of having health insurance changes at each level of race compared to White. The P-value for each coefficient is on the far right. This shows that _every_ other race has _significantly less_ rates of health insurance coverage. But, as in our multiple linear regression analysis above, are there other important variables that we're leaving out that could alter our conclusions? Lets add a few more variables into the model to see if something else can explain the apparent Race-Insured association. Let's add a few things likely to be involved (Age and Income), and something that's probably irrelevant (hours slept at night).
+
+```{r}
+fit <- glm(Insured ~ Age+Income+SleepHrsNight+Race, data=nha, family="binomial")
+summary(fit)
+```
+
+A few things become apparent:
+
+1. Age and income are both highly associated with whether someone is insured. Both of these variables are highly significant ($P<2.2 \times 10^{-16}$), and the coefficient (the `Estimate` column) is positive, meaning that for each unit increase in one of these variables, the log odds of being insured increases by the corresponding amount.
+
+1. Hours slept per night is not meaningful at all.
+
+1. After accounting for age and income, several of the race-specific differences are no longer statistically significant, but others remain so.
+1. The absolute value of the test statistic (column called `z value`) can roughly be taken as an estimate of the "importance" of that variable to the overall model. So, age and income are the most important influences in this model; self-identifying as Hispanic or Mexican are also very highly important, hours slept per night isn't important at all, and the other race categories fall somewhere in between.
+
+There is _much_ more to go into with logistic regression. This lesson only scratches the surface. Missing from this lesson are things like regression diagnostics, model comparison approaches, penalization, interpretation of model coefficients, fitting interaction effects, and much more. Alan Agresti's [_Categorical Data Analysis_](https://www.amazon.com/Categorical-Data-Analysis-Alan-Agresti/dp/0470463635/ref=sr_1_1?ie=UTF8&qid=1473180895&sr=8-1&keywords=categorical+data+analysis&tag=gettgenedone-20) has long been considered the definitive text on this topic. I also recommend Agresti's [_Introduction to Categorical Data Analysis_](https://www.amazon.com/Introduction-Categorical-Data-Analysis/dp/0471226181/ref=sr_1_3?ie=UTF8&qid=1473180895&sr=8-3&keywords=categorical+data+analysis&tag=gettgenedone-20) (a.k.a. "Agresti lite") for a gentler introduction.
+
+
+### ** EXERCISE 4 **
+** YOUR TURN **
+
+1. What's the relationship between diabetes and participating in rigorous physical activity or sports?
+
+A. Create a contingency table with Diabetes status in rows and physical activity status in columns.
+
+B. Display that table with margins.
+
+C. Show the proportions of diabetics and nondiabetics, separately, who are physically active or not.
+    - Is this relationship significant?
+    - Create a mosaic plot to visualize the relationship
+
+```{r, include=FALSE, eval=FALSE}
+#A.
+xt <- xtabs(~Diabetes+PhysActive, data=nha)
+
+#B. 
+addmargins(xt)
+
+#C.
+prop.table(xt, margin=1)
+chisq.test(xt)
+mosaicplot(xt)
+# assocplot(xt)
+```
+
+2. Model the same association in a logistic regression framework to assess the risk of diabetes using physical activity as a predictor.
+    <!-- - First, make Diabetes a factor variable if you haven't already (`nha$Diabetes <- factor(nha$Diabetes)`). -->
+
+A. Fit a model with just physical activity as a predictor, and display a model summary.
+
+B. Add gender to the model, and show a summary.
+
+C. Continue adding weight and age to the model. What happens to the gender association?
+
+D. Continue and add income to the model. What happens to the original association with physical activity?
+
+```{r, include=FALSE, eval=FALSE}
+#A. 
+summary(glm(Diabetes~PhysActive, data=nha, family="binomial"))
+
+#B.
+summary(glm(Diabetes~PhysActive+Gender, data=nha, family="binomial"))
+
+#C. 
+summary(glm(Diabetes~PhysActive+Gender+Age+Weight, data=nha, family="binomial"))
+
+#D.
+summary(glm(Diabetes~PhysActive+Gender+Age+Weight+Income, data=nha, family="binomial"))
+```
