@@ -1,7 +1,7 @@
 Using R to Visualize Data
 ================
 Data Services @ HSL
-8/2/2018
+8/9/2018
 
 This session will cover fundamental concepts for creating effective data visualization and will introduce tools and techniques for visualizing large, high-dimensional data using R. We will review fundamental concepts for visually displaying quantitative information, such as using series of small multiples, avoiding "chart-junk," and maximizing the data-ink ratio. We will cover the grammar of graphics (geoms, aesthetics, stats, and faceting) using the ggplot2 package to create plots layer-by-layer.
 
