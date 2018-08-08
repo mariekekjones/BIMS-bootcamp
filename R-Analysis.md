@@ -110,6 +110,7 @@ nh
 This particular excerpt has 5000 observations of 32 variables. We know from our lesson this morning that this dataset contains both children and adults. For us to do analyses with these data, let's focus on adults only.
 
 ``` r
+# Create adults only dataset
 nha <- nh %>%
   filter(Age >= 18)
 nha
@@ -148,6 +149,7 @@ A note on characters versus factors: One thing that you immediately notice is th
 Factor variables are used to represent categorical variables with two or more *levels*, e.g., "male" or "female" for Gender, or "Single" versus "Committed" for RelationshipStatus. For the most part, statistical analysis treats these two data types the same. It's often easier to leave categorical variables as characters. However, in some cases you may get a warning message alerting you that a character variable was converted into a factor variable during analysis. Generally, these warnings are nothing to worry about. You can, if you like, convert individual variables to factor variables, or simply use dplyr's `mutate_if` to convert all character vectors to factor variables:
 
 ``` r
+# investigate Race (categorical variable)
 class(nha$Race)
 ```
 
@@ -182,14 +184,13 @@ Descriptive statistics are used to describe the basic features of the data. They
 You could do the below operations using dplyr, but remember, this returns a single-row, single-column tibble, *not* a single scalar value like the above. This is only really useful in the context of grouping and summarizing, so here we will mostly use base R functions.
 
 ``` r
-# mean BMI
+# measures of the center
 mean(nha$BMI)
 ```
 
     ## [1] NA
 
 ``` r
-# measures of the center
 mean(nha$BMI, na.rm = TRUE)
 ```
 
@@ -398,6 +399,7 @@ Equal variance. Also called homoscedasticity of variances. ?? we could think abo
 Density plots are an excellent way to assess normality and equal variance all in one plot
 
 ``` r
+# EDA
 #create overlapping density plots of height colored by gender
 nha %>%
   ggplot(aes(Height)) + geom_density(aes(fill = Gender, alpha = .5))
@@ -609,7 +611,7 @@ levels(nha$SmokingStatus)
     ## [1] "Current" "Former"  "Never"
 
 ``` r
-# create the fit and then look at the ANOVA summary
+# linear model for the relationship between smoking status and BMI
 fit <- lm(BMI ~ SmokingStatus, data = nha)
 anova(fit)
 ```
@@ -826,6 +828,7 @@ After we have fit a model, we need to assess whether the assumptions of linear m
 Phew. That is a lot of assumptions. Luckily, R has a wonderful built-in plot function to help you assess the assumptions.
 
 ``` r
+# check assumptions of LM
 plot(fit)
 ```
 
@@ -836,6 +839,7 @@ plot(fit)
 Next, let's do a multiple linear regression analysis, where we attempt to model the effect of multiple predictor variables at once on some continuous outcome. First, let's look at the effect of physical activity on testosterone levels. Let's do this with a t-test and linear regression, showing that you get the same results.
 
 ``` r
+#t-test for Testosterone ~ PhysActive
 t.test(Testosterone~PhysActive, data=nha, var.equal=TRUE)
 ```
 
@@ -852,6 +856,7 @@ t.test(Testosterone~PhysActive, data=nha, var.equal=TRUE)
     ##          207.5645          226.8315
 
 ``` r
+#lm for Testosterone ~ PhysActive
 summary(lm(Testosterone~PhysActive, data=nha))
 ```
 
@@ -1014,8 +1019,7 @@ summary(fit)
     ## Multiple R-squared:  0.07595,    Adjusted R-squared:  0.0754 
     ## F-statistic: 139.8 on 2 and 3403 DF,  p-value: < 2.2e-16
 
-DISCRETE VARIABLE ANALYSES
---------------------------
+### DISCRETE VARIABLE ANALYSES
 
 So far we have covered: 1. T-tests -- analyzing differences in one continuous variable between 2 groups 2. ANOVA -- analyzing differences in one continuous variable between 3+ groups 3. LM -- analyzing the impact of one continuous variable on another continuous variable 4. Multiple regression -- analyzing the impact of several continuous variables on another continuous variable
 
@@ -1026,6 +1030,7 @@ In all of these cases, the dependent variable, i.e., the outcome, or *Y* variabl
 The [`xtabs()`](http://stat.ethz.ch/R-manual/R-patched/library/stats/html/xtabs.html) function is useful for creating contingency tables from categorical variables. Let's create a gender by diabetes status contingency table, and assign it to an object called **`xt`**. After making the assignment, type the name of the object to view it.
 
 ``` r
+#cross tabulation of Gender and Diabetes
 xt <- xtabs(~Gender+Diabetes, data=nha)
 xt
 ```
@@ -1077,6 +1082,7 @@ Looks like men have slightly higher rates of diabetes than women. But is this si
 The chi-square test is used to assess the independence of these two factors. That is, if the null hypothesis that gender and diabetes are independent is true, the we would expect a proportionally equal number of diabetics across each sex. Males seem to be at slightly higher risk than females, but the difference is just short of statistically significant.
 
 ``` r
+#chi square for diabetes and gender
 chisq.test(xt)
 ```
 
@@ -1089,6 +1095,7 @@ chisq.test(xt)
 An alternative to the chi-square test is [Fisher's exact test](https://en.wikipedia.org/wiki/Fisher%27s_exact_test). Rather than relying on a critical value from a theoretical chi-square distribution, Fisher's exact test calculates the *exact* probability of observing the contingency table as is. It's especially useful when there are very small *n*'s in one or more of the contingency table cells. Both the chi-square and Fisher's exact test give us p-values of approximately 0.06.
 
 ``` r
+# fisher's exact test for diabetes and gender
 fisher.test(xt)
 ```
 
@@ -1172,10 +1179,11 @@ chisq.test(xt)$expected
 We can also make a helpful plot for visualizing categorical data called a mosaic plot: (this is a base R plot, not ggplot2)
 
 ``` r
+# plot for categorical data
 mosaicplot(xt, main=NA)
 ```
 
-![](R-Analysis_files/figure-markdown_github/unnamed-chunk-34-1.png) Now we can easily see the proportion of each Race that is insured
+![](R-Analysis_files/figure-markdown_github/unnamed-chunk-34-1.png) Now we can easily see the proportion of each Race that is insured and the proportion of each Race in the dataset overall
 
 ### Logistic regression
 
@@ -1201,7 +1209,7 @@ The typical use looks like this:
 Before we fit a logistic regression model let's *relevel* the Race variable so that "White" is the baseline. We saw above that people who identify as "White" have the highest rates of being insured. When we run the logistic regression, we'll get a separate coefficient (effect) for each level of the factor variable(s) in the model, telling you change in log odds that that level has, *as compared to the baseline group*.
 
 ``` r
-#Look at Race. The default ordering is alphabetical
+#Look at levels of Race. The default ordering is alphabetical
 levels(nha$Race)
 
 # Let's relevel that where the group with the highest rate of insurance is "baseline"
@@ -1215,6 +1223,7 @@ nha <- nha %>%
 Now, let's fit a logistic regression model assessing how the odds of being insured change with different levels of race.
 
 ``` r
+#logistic regression of insurance ~ race
 fit <- glm(Insured~Race, data=nha, family="binomial")
 summary(fit)
 ```
@@ -1250,6 +1259,7 @@ summary(fit)
 The `Estimate` column shows the log of the odds ratio -- how the log odds of having health insurance changes at each level of race compared to White. The P-value for each coefficient is on the far right. This shows that *every* other race has *significantly less* rates of health insurance coverage. But, as in our multiple linear regression analysis above, are there other important variables that we're leaving out that could alter our conclusions? Lets add a few more variables into the model to see if something else can explain the apparent Race-Insured association. Let's add a few things likely to be involved (Age and Income), and something that's probably irrelevant (hours slept at night).
 
 ``` r
+#logistic regression of Insured with lots of predictors
 fit <- glm(Insured ~ Age+Income+SleepHrsNight+Race, data=nha, family="binomial")
 summary(fit)
 ```
