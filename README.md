@@ -13,5 +13,5 @@ http://cal.hsl.virginia.edu/calendar/data/
 
 ### Lessons
 This session is composed of two lessons that can be viewed individually.
-[Visualization](R-viz.md)
-[Analysis](R-Analysis.md)
+1. [Visualization](https://github.com/mariekekjones/BIMS-bootcamp/blob/master/R-Viz.md)
+2. [Analysis](https://github.com/mariekekjones/BIMS-bootcamp/blob/master/R-Analysis.md)
