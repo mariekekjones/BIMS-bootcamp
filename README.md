@@ -10,3 +10,8 @@ All teaching materials were developed by [Data Services at the Health Sciences L
 For a complete list of upcoming workshops visit:
 
 http://cal.hsl.virginia.edu/calendar/data/
+
+### Lessons
+This session is composed of two lessons that can be viewed individually.
+[Visualization](R-viz.md)
+[Analysis](R-Analysis.md)
