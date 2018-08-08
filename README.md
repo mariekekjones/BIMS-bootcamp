@@ -15,3 +15,5 @@ http://cal.hsl.virginia.edu/calendar/data/
 This session is composed of two lessons that can be viewed individually.
 1. [Visualization](https://github.com/mariekekjones/BIMS-bootcamp/blob/master/R-Viz.md)
 2. [Analysis](https://github.com/mariekekjones/BIMS-bootcamp/blob/master/R-Analysis.md)
+
+In class, we will be working from the Skeleton scripts [R-Viz-Skeleton](https://github.com/mariekekjones/BIMS-bootcamp/blob/master/R-Viz-Skeleton.R) and [R-Analsysis-Skeleton](https://github.com/mariekekjones/BIMS-bootcamp/blob/master/R-Analysis-Skeleton.R)
