@@ -1,6 +1,7 @@
 
 # Load library -----
-
+library(tidyverse)
+# or load readr, dplyr, ggplot2
 
 # Download data and skeleton script from GitHub into project -----
  
@@ -9,13 +10,16 @@
 # NHANES data ----
 
 # Read in downloaded data using `read_csv()` from {readr} package
-
+nh <- read_csv("nhanes.csv")
 
 # Show the first few lines of the data and the dimensions
+head(nh)
+head(nh, 10)
 
+dim(nh)
 
 # Optionally bring up data in a viewer window.
-
+View(nh)
 
 # dplyr review --------
 
