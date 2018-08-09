@@ -18,7 +18,7 @@ In this session, we will use the following packages: - tidyverse - or readr, dpl
 library(tidyverse)
 ```
 
-    ## ── Attaching packages ─────────────────────────────────────────── tidyverse 1.2.1 ──
+    ## ── Attaching packages ─────────────────────────────────────────────────── tidyverse 1.2.1 ──
 
     ## ✔ ggplot2 2.2.1     ✔ purrr   0.2.5
     ## ✔ tibble  1.4.2     ✔ dplyr   0.7.6
@@ -27,7 +27,7 @@ library(tidyverse)
 
     ## Warning: package 'dplyr' was built under R version 3.5.1
 
-    ## ── Conflicts ────────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ── Conflicts ────────────────────────────────────────────────────── tidyverse_conflicts() ──
     ## ✖ dplyr::filter() masks stats::filter()
     ## ✖ dplyr::lag()    masks stats::lag()
 
@@ -476,7 +476,7 @@ C. Run the analysis. Is the association between relationship status and alcohol 
 nha %>%
   filter(!is.na(RelationshipStatus)) %>%
   ggplot(aes(AlcoholYear)) + 
-  geom_density(aes(fill = RelationshipStatus, alpha = .3))
+  geom_density(aes(fill = RelationshipStatus), alpha = .3)
 ```
 
     ## Warning: Removed 698 rows containing non-finite values (stat_density).

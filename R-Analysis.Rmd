@@ -215,7 +215,7 @@ C. Run the analysis. Is the association between relationship status and alcohol 
 nha %>%
   filter(!is.na(RelationshipStatus)) %>%
   ggplot(aes(AlcoholYear)) + 
-  geom_density(aes(fill = RelationshipStatus, alpha = .3))
+  geom_density(aes(fill = RelationshipStatus), alpha = .3)
 
 #B&C based on plots, do wilcox
 wilcox.test(AlcoholYear ~ RelationshipStatus, data = nha)
